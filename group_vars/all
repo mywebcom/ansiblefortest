@@ -1,0 +1,4 @@
+---
+# group_vars/all
+
+ansible_resource: ansible-resource.s3-website-ap-southeast-2.amazonaws.com

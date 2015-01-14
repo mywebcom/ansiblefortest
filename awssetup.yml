@@ -1,0 +1,65 @@
+# test_setup.yml
+
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  tasks:
+    - name: create a test vpc
+      ec2_vpc:
+        state: present
+        cidr_block: "172.22.0.0/16"
+        resource_tags: { "Environment":"DevOpsTest" }
+        subnets:
+          - cidr: 172.22.1.0/24
+            resource_tags: { "Environment":"DevOpsTest", "Tier" : "Web" }
+            az: ap-southeast-2b
+        internet_gateway: true
+        route_tables:
+          - subnets:
+              - 172.22.1.0/24
+            routes:
+              - dest: 0.0.0.0/0
+                gw: igw
+        validate_certs: no
+        region: ap-southeast-2
+      register: vpc
+  
+    - name: create a test security group
+      ec2_group: 
+        region: ap-southeast-2
+        name: devopstest
+        description: devops test
+        vpc_id: "{{vpc.vpc_id}}"
+        rules:
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 0.0.0.0/0
+        
+    - name: provision test ec2 instance
+      ec2: 
+        region: ap-southeast-2
+        key_name: devopsrichard
+        group: devopstest
+        instance_type: t2.micro
+        assign_public_ip: yes
+        vpc_subnet_id: "{{vpc.subnets[0].id}}"
+        exact_count: 1
+        zone: ap-southeast-2b
+        image: ami-1711732d
+        wait: true
+        count_tag: { "Name":"Sinatra"}
+        instance_tags: { "Name":"Sinatra" }
+      register: ec2
+     
+    - name: wait for ssh to come up
+      wait_for: host={{ item.public_dns_name }} port=22 delay=60 timeout=320 state=started
+      with_items: ec2.tagged_instances     
+  
+    
+   
+   

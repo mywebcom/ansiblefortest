@@ -1,0 +1,8 @@
+- hosts: "{{host}}"
+  name: provision system to run sinatra application
+  user: ubuntu
+  sudo: yes
+  gather_facts: true
+  roles:
+   - { role: ruby, tags: ruby, sudo: True }
+   - sinatra
